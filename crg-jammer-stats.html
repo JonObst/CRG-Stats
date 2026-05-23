@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRG Bout Stats</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #0a0a0f;
+  --surf:    #12121a;
+  --surf2:   #1a1a26;
+  --border:  #2a2a3a;
+  --text:    #e8e8f0;
+  --muted:   #7070a0;
+  --dim:     #404058;
+  --accent:  #f0f020;
+  --red:     #ff3a3a;
+  --green:   #20e060;
+  --orange:  #ff8020;
+  --t1:      #40a0ff;
+  --t2:      #ff4060;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);
+  pointer-events: none; z-index: 1000;
+}
+
+/* ── HEADER ── */
+header {
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 16px;
+  background: var(--surf);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 26px; letter-spacing: 3px;
+  color: var(--accent);
+  text-shadow: 0 0 16px rgba(240,240,32,0.4);
+  white-space: nowrap;
+}
+.conn-bar { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 260px; }
+.conn-bar input {
+  background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px;
+  padding: 5px 10px; flex: 1; outline: none; transition: border-color 0.2s;
+}
+.conn-bar input:focus { border-color: var(--accent); }
+.btn {
+  background: var(--accent); color: #000;
+  border: none; font-family: 'Bebas Neue', sans-serif;
+  font-size: 15px; letter-spacing: 1px; padding: 5px 14px;
+  cursor: pointer; transition: opacity 0.15s; white-space: nowrap;
+}
+.btn:hover { opacity: 0.85; }
+.btn.danger { background: var(--red); color: #fff; }
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--dim); flex-shrink: 0; transition: all 0.3s;
+}
+.dot.on { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
+.dot.err { background: var(--red); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+.status-txt { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.game-info { margin-left: auto; text-align: right; font-size: 11px; color: var(--muted); }
+.game-info .gname { font-family: 'DM Sans',sans-serif; font-size: 12px; font-weight: 600; color: var(--text); max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── SCOREBOARD BAR ── */
+.scoreboard {
+  display: flex; gap: 1px;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.score-team {
+  flex: 1; padding: 10px 16px;
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surf);
+}
+.score-team.t1 { border-left: 3px solid var(--t1); }
+.score-team.t2 { border-right: 3px solid var(--t2); justify-content: flex-end; }
+.team-name-score { display: flex; align-items: baseline; gap: 10px; }
+.team-name-disp {
+  font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 13px;
+  max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.t1 .team-name-disp { color: var(--t1); }
+.t2 .team-name-disp { color: var(--t2); }
+.score-big { font-family: 'Bebas Neue', sans-serif; font-size: 48px; line-height: 1; letter-spacing: 2px; }
+.t1 .score-big { color: var(--t1); }
+.t2 .score-big { color: var(--t2); }
+.score-meta { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); }
+.active-jammer { font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 600; color: var(--text); white-space: nowrap; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+.lead-badge {
+  background: var(--accent); color: #000;
+  font-family: 'Bebas Neue', sans-serif; font-size: 13px; letter-spacing: 1px;
+  padding: 2px 8px; opacity: 0; transition: opacity 0.3s;
+}
+.lead-badge.on { opacity: 1; }
+.pj-banner {
+  padding: 4px 12px; font-size: 10px; letter-spacing: 1px; color: var(--orange);
+  border-left: 2px solid var(--orange); display: none;
+}
+.pj-banner.on { display: block; }
+
+/* ── CENTER CLOCK ── */
+.jam-center {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; padding: 8px 20px; background: var(--bg); min-width: 130px;
+}
+.jam-lbl { font-size: 9px; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
+.jam-num { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--dim); letter-spacing: 2px; }
+.jam-clock-big { font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 2px; color: var(--accent); text-shadow: 0 0 12px rgba(240,240,32,0.3); transition: color 0.3s; }
+.jersey-chip { display: inline-block; font-size: 9px; letter-spacing: 1px; padding: 1px 6px; border: 1px solid currentColor; opacity: 0.7; margin-left: 6px; vertical-align: middle; text-transform: uppercase; }
+
+/* ── TABS ── */
+.tab-bar {
+  display: flex; gap: 1px; background: var(--border);
+  border-bottom: 2px solid var(--border);
+  position: sticky; top: 0; z-index: 10;
+}
+.tab-btn {
+  padding: 8px 24px; background: var(--surf2);
+  font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 2px;
+  color: var(--dim); border: none; cursor: pointer; transition: all 0.15s;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+}
+.tab-btn:hover { color: var(--muted); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--surf); }
+
+/* ── MAIN GRID ── */
+.main { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); padding: 1px; }
+.team-panel { background: var(--bg); display: flex; flex-direction: column; }
+.panel-hdr {
+  padding: 8px 16px; background: var(--surf); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 6px;
+}
+.panel-hdr .pname { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; }
+.t1 .pname { color: var(--t1); }
+.t2 .pname { color: var(--t2); }
+.panel-hdr .psub { font-size: 9px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; margin-left: auto; }
+
+/* ── TABLE ROWS ── */
+.sec-head {
+  padding: 5px 16px; background: var(--surf2);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  font-size: 9px; letter-spacing: 2px; color: var(--muted);
+  display: grid; gap: 4px;
+}
+/* Jammer cols: # name lead% for agnst track pen sp */
+.jammer-grid { grid-template-columns: 72px 1fr 60px 52px 64px 52px 36px 36px; }
+/* Blocker cols: # name jams pivot track pen */
+.blocker-grid { grid-template-columns: 72px 1fr 48px 48px 52px 36px; }
+/* Pivot-as-jammer cols: # name for agnst track pen passed-from */
+.sp-pivot-grid { grid-template-columns: 72px 1fr 52px 64px 52px 36px 1fr; }
+
+.data-row {
+  display: grid; gap: 4px; padding: 6px 16px;
+  border-bottom: 1px solid rgba(42,42,58,0.5);
+  align-items: center; position: relative;
+  transition: background 0.1s;
+}
+.data-row:hover { background: var(--surf2); }
+.data-row.active-row { background: rgba(240,240,32,0.04); }
+.data-row.active-row .sknum::before {
+  content: '▶ ';
+  font-size: 10px;
+  color: var(--accent);
+  vertical-align: middle;
+}
+
+.sknum { font-family: 'Bebas Neue', sans-serif; font-size: 20px; line-height: 1; }
+.t1 .sknum { color: var(--t1); }
+.t2 .sknum { color: var(--t2); }
+.skname { font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat { text-align: right; font-variant-numeric: tabular-nums; }
+.stat.sm { font-size: 11px; }
+.pct-hi { color: var(--green); }
+.pct-md { color: var(--accent); }
+.pct-lo { color: var(--red); }
+.pts-for { color: var(--green); }
+.pts-ag  { color: var(--red); }
+.diff-pos { color: var(--green); font-size: 11px; }
+.diff-neg { color: var(--red);   font-size: 11px; }
+.diff-zero{ color: var(--muted); font-size: 11px; }
+.track-t { color: var(--text); font-size: 11px; text-align: right; opacity: 0.65; }
+.sp-cell { color: var(--orange); text-align: right; }
+.sp-recv-cell { font-size: 11px; color: var(--muted); display: flex; justify-content: flex-end; align-items: center; }
+
+.inbox-badge {
+  background: var(--red); color: #fff;
+  font-family: 'Bebas Neue', sans-serif; font-size: 11px; letter-spacing: 1px;
+  padding: 1px 5px; margin-left: 6px; display: inline-block;
+}
+.no-data { padding: 20px 16px; color: var(--dim); font-size: 11px; letter-spacing: 1px; text-align: center; }
+.waiting { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 280px; gap: 8px; }
+.waiting .big { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 4px; color: var(--dim); }
+.waiting .sub { font-size: 11px; color: var(--dim); letter-spacing: 2px; text-transform: uppercase; }
+.period-clock { font-size: 13px; color: var(--muted); font-family: 'DM Mono', monospace; letter-spacing: 1px; }
+
+footer { padding: 6px 16px; border-top: 1px solid var(--border); font-size: 10px; color: var(--dim); display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">BOUT STATS</div>
+  <div class="conn-bar">
+    <div class="dot" id="dot"></div>
+    <input type="text" id="ip-in" value="yourserver:8000" placeholder="CRG IP:port"/>
+    <button class="btn" id="conn-btn" onclick="connect()">Connect</button>
+    <button class="btn danger" id="disc-btn" style="display:none" onclick="disconnect()">Disconnect</button>
+    <span class="status-txt" id="status-txt">Not connected</span>
+  </div>
+  <div class="game-info">
+    <div class="gname" id="gname">—</div>
+    <div id="gstate">waiting</div>
+  </div>
+</header>
+
+<!-- SCOREBOARD -->
+<div class="scoreboard">
+  <div class="score-team t1" id="st1">
+    <div class="team-name-score">
+      <span class="team-name-disp" id="t1n">Team 1</span>
+      <span class="score-big" id="t1s">0</span>
+    </div>
+    <div class="score-meta">
+      <span id="t1js">JAM +0</span>
+      <span class="active-jammer" id="t1aj"></span>
+    </div>
+    <div class="lead-badge" id="t1lead">LEAD</div>
+    <div class="pj-banner" id="t1pj">⚡ POWER JAM</div>
+  </div>
+
+  <div class="jam-center">
+    <div class="jam-lbl">Period</div>
+    <div class="jam-num" id="pnum">—</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--muted);letter-spacing:2px" id="pclock-lbl">—:——</div>
+    <div class="jam-clock-big" id="jclock">—</div>
+    <div class="jam-lbl" id="clock-state-lbl">JAM</div>
+    <div class="jam-lbl">Jam</div>
+    <div class="jam-num" id="jnum">—</div>
+  </div>
+
+  <div class="score-team t2" id="st2">
+    <div class="lead-badge" id="t2lead">LEAD</div>
+    <div class="pj-banner" id="t2pj">⚡ POWER JAM</div>
+    <div class="score-meta" style="text-align:right">
+      <span id="t2js">JAM +0</span>
+      <span class="active-jammer" id="t2aj" style="text-align:right"></span>
+    </div>
+    <div class="team-name-score">
+      <span class="score-big" id="t2s">0</span>
+      <span class="team-name-disp" id="t2n">Team 2</span>
+    </div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tab-bar">
+  <button class="tab-btn active" id="tab-jammers" onclick="switchTab('jammers')">JAMMERS</button>
+  <button class="tab-btn" id="tab-blockers" onclick="switchTab('blockers')">BLOCKERS</button>
+</div>
+
+<!-- JAMMERS TAB -->
+<div id="view-jammers" class="main">
+  <div class="team-panel t1" id="jpanel-t1">
+    <div class="panel-hdr t1"><span class="pname" id="jph-t1">TEAM 1</span><span class="psub">Jammers &amp; Star Pass</span></div>
+    <div class="sec-head jammer-grid">
+      <span>#</span><span>SKATER</span>
+      <span style="text-align:right">LEAD%</span>
+      <span style="text-align:right">FOR</span>
+      <span style="text-align:right">AGNST</span>
+      <span style="text-align:right">TRACK</span>
+      <span style="text-align:right">PEN</span>
+      <span style="text-align:right">SP</span>
+    </div>
+    <div id="jrows-t1"><div class="waiting"><div class="big">WAITING</div><div class="sub">Connect to CRG</div></div></div>
+    <div class="sec-head sp-pivot-grid" style="margin-top:4px">
+      <span>#</span><span>PIVOT (Star Receiver)</span>
+      <span style="text-align:right">FOR</span>
+      <span style="text-align:right">AGNST</span>
+      <span style="text-align:right">TRACK</span>
+      <span style="text-align:right">PEN</span>
+      <span style="text-align:right">PASSED FROM</span>
+    </div>
+    <div id="sprows-t1"><div class="no-data">no star passes yet</div></div>
+  </div>
+  <div class="team-panel t2" id="jpanel-t2">
+    <div class="panel-hdr t2"><span class="pname" id="jph-t2">TEAM 2</span><span class="psub">Jammers &amp; Star Pass</span></div>
+    <div class="sec-head jammer-grid">
+      <span>#</span><span>SKATER</span>
+      <span style="text-align:right">LEAD%</span>
+      <span style="text-align:right">FOR</span>
+      <span style="text-align:right">AGNST</span>
+      <span style="text-align:right">TRACK</span>
+      <span style="text-align:right">PEN</span>
+      <span style="text-align:right">SP</span>
+    </div>
+    <div id="jrows-t2"><div class="waiting"><div class="big">WAITING</div><div class="sub">Connect to CRG</div></div></div>
+    <div class="sec-head sp-pivot-grid" style="margin-top:4px">
+      <span>#</span><span>PIVOT (Star Receiver)</span>
+      <span style="text-align:right">FOR</span>
+      <span style="text-align:right">AGNST</span>
+      <span style="text-align:right">TRACK</span>
+      <span style="text-align:right">PEN</span>
+      <span style="text-align:right">PASSED FROM</span>
+    </div>
+    <div id="sprows-t2"><div class="no-data">no star passes yet</div></div>
+  </div>
+</div>
+
+<!-- BLOCKERS TAB -->
+<div id="view-blockers" class="main" style="display:none">
+  <div class="team-panel t1" id="bpanel-t1">
+    <div class="panel-hdr t1"><span class="pname" id="bph-t1">TEAM 1</span><span class="psub">Blockers</span></div>
+    <div class="sec-head blocker-grid">
+      <span>#</span><span>SKATER</span>
+      <span style="text-align:right">JAMS</span>
+      <span style="text-align:right">PIVOT</span>
+      <span style="text-align:right">TRACK</span>
+      <span style="text-align:right">PEN</span>
+    </div>
+    <div id="brows-t1"><div class="waiting"><div class="big">WAITING</div><div class="sub">Connect to CRG</div></div></div>
+  </div>
+  <div class="team-panel t2" id="bpanel-t2">
+    <div class="panel-hdr t2"><span class="pname" id="bph-t2">TEAM 2</span><span class="psub">Blockers</span></div>
+    <div class="sec-head blocker-grid">
+      <span>#</span><span>SKATER</span>
+      <span style="text-align:right">JAMS</span>
+      <span style="text-align:right">PIVOT</span>
+      <span style="text-align:right">TRACK</span>
+      <span style="text-align:right">PEN</span>
+    </div>
+    <div id="brows-t2"><div class="waiting"><div class="big">WAITING</div><div class="sub">Connect to CRG</div></div></div>
+  </div>
+</div>
+
+<footer>
+  <span>CRG BOUT STATS // real-time WebSocket</span>
+  <span id="footer-info">—</span>
+</footer>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let ws = null, gameId = null, state = {};
+let jammerStats  = {'1':{}, '2':{}};
+let pivotStats   = {'1':{}, '2':{}};
+let blockerStats = {'1':{}, '2':{}};
+let penCount     = {'1':{}, '2':{}};
+let skaters      = {'1':{}, '2':{}};
+let currentJammer  = {'1':null, '2':null};
+let currentBlockers = {'1':new Set(), '2':new Set()};
+let currentSPPivot  = {'1':null, '2':null};
+let currentTab   = 'jammers';
+
+// Clock interpolation -- jam clock
+let clockMs = null, clockRunning = false, clockLastSet = 0, clockDir = true;
+let clockInterval = null;
+// Period clock (counts down, no interpolation needed -- updates per jam)
+let periodClockMs = null;
+
+// ── WebSocket ─────────────────────────────────────────────────────────────────
+function connect() {
+  const ip = document.getElementById('ip-in').value.trim();
+  if (!ip) return;
+  setStatus('', 'Connecting...');
+  ws = new WebSocket(`ws://${ip}/WS?source=boutStats&platform=dashboard`);
+  ws.onopen = () => {
+    setStatus('on', 'Connected');
+    document.getElementById('conn-btn').style.display = 'none';
+    document.getElementById('disc-btn').style.display = '';
+    ws.send(JSON.stringify({action:'Register', paths:['ScoreBoard']}));
+    startClockTick();
+  };
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.state) { mergeState(msg.state); scheduleRender(); }
+    } catch(err) {}
+  };
+  ws.onclose = () => {
+    setStatus('', 'Disconnected');
+    document.getElementById('conn-btn').style.display = '';
+    document.getElementById('disc-btn').style.display = 'none';
+    stopClockTick();
+  };
+  ws.onerror = () => setStatus('err', 'Error');
+}
+function disconnect() { if (ws) ws.close(); }
+function setStatus(cls, txt) {
+  document.getElementById('dot').className = 'dot ' + cls;
+  document.getElementById('status-txt').textContent = txt;
+}
+
+// ── Clock interpolation ───────────────────────────────────────────────────────
+function startClockTick() {
+  stopClockTick();
+  clockInterval = setInterval(tickClock, 100);
+}
+function stopClockTick() {
+  if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
+}
+function tickClock() {
+  if (clockMs === null || !clockRunning) return;
+  const jamRunning    = state['ScoreBoard.CurrentGame.Clock(Jam).Running'];
+  const interRunning  = state['ScoreBoard.CurrentGame.Clock(Intermission).Running'];
+  const timeoutRun    = state['ScoreBoard.CurrentGame.Clock(Timeout).Running'];
+  const lineupRun     = state['ScoreBoard.CurrentGame.Clock(Lineup).Running'];
+  if (!jamRunning || interRunning || timeoutRun || lineupRun) return;
+  const elapsed = Date.now() - clockLastSet;
+  const current = clockDir ? Math.max(0, clockMs - elapsed) : clockMs + elapsed;
+  renderClock(current);
+}
+function renderClock(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const ss = String(s % 60).padStart(2, '0');
+  const el = document.getElementById('jclock');
+  el.textContent = `${m}:${ss}`;
+  el.style.color = (clockRunning && s <= 10) ? 'var(--red)' : 'var(--accent)';
+}
+
+// ── State management ──────────────────────────────────────────────────────────
+function mergeState(incoming) {
+  Object.assign(state, incoming);
+  const newId = state['ScoreBoard.CurrentGame.Id'] || state['ScoreBoard.CurrentGame.Name'] || null;
+  if (newId && newId !== gameId) {
+    if (gameId !== null) {
+      jammerStats  = {'1':{}, '2':{}};
+      pivotStats   = {'1':{}, '2':{}};
+      blockerStats = {'1':{}, '2':{}};
+      penCount     = {'1':{}, '2':{}};
+      skaters      = {'1':{}, '2':{}};
+    }
+    gameId = newId;
+  }
+  if (!gameId) {
+    const hasCG = Object.keys(state).some(k => k.startsWith('ScoreBoard.CurrentGame.'));
+    if (hasCG) gameId = 'current';
+  }
+  // Update clock state immediately when we get a clock key
+  const t = incoming['ScoreBoard.CurrentGame.Clock(Jam).Time'];
+  if (t !== undefined) { clockMs = t; clockLastSet = Date.now(); }
+  const r = incoming['ScoreBoard.CurrentGame.Clock(Jam).Running'];
+  if (r !== undefined) clockRunning = r;
+  const d = incoming['ScoreBoard.CurrentGame.Clock(Jam).Direction'];
+  if (d !== undefined) clockDir = d;
+  const pt = incoming['ScoreBoard.CurrentGame.Clock(Period).Time'];
+  if (pt !== undefined) periodClockMs = pt;
+}
+
+let renderTimer = null;
+function scheduleRender() {
+  if (renderTimer) return;
+  renderTimer = setTimeout(() => { renderTimer = null; render(); }, 100);
+}
+
+function g(key) { return state['ScoreBoard.CurrentGame.' + key]; }
+
+function penKeyPfx(t) { return `ScoreBoard.CurrentGame.Team(${t})`; }
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('view-jammers').style.display  = tab === 'jammers'  ? '' : 'none';
+  document.getElementById('view-blockers').style.display = tab === 'blockers' ? '' : 'none';
+  document.getElementById('tab-jammers').className  = 'tab-btn' + (tab === 'jammers'  ? ' active' : '');
+  document.getElementById('tab-blockers').className = 'tab-btn' + (tab === 'blockers' ? ' active' : '');
+}
+
+// ── Jersey color map ──────────────────────────────────────────────────────────
+function jerseyColor(name) {
+  if (!name) return null;
+  const n = name.toLowerCase();
+  const map = {
+    'black':   {fg:'#c8c8c8', bg:'rgba(255,255,255,0.03)', accent:'#e0e0e0', border:'#505050'},
+    'white':   {fg:'#f0f0f0', bg:'rgba(255,255,255,0.04)', accent:'#ffffff', border:'#909090'},
+    'red':     {fg:'#ff7070', bg:'rgba(220,40,40,0.04)',   accent:'#ff5050', border:'#cc2020'},
+    'dark red':{fg:'#ff7070', bg:'rgba(180,20,20,0.05)',   accent:'#ff4040', border:'#aa1010'},
+    'blue':    {fg:'#70b0ff', bg:'rgba(40,80,220,0.04)',   accent:'#5090ff', border:'#2060cc'},
+    'dark blue':{fg:'#70b0ff',bg:'rgba(20,40,180,0.05)',   accent:'#4070ff', border:'#1040aa'},
+    'green':   {fg:'#50e070', bg:'rgba(40,180,80,0.04)',   accent:'#30d050', border:'#10a030'},
+    'purple':  {fg:'#d070ff', bg:'rgba(140,40,220,0.04)',  accent:'#b050e0', border:'#9030c0'},
+    'yellow':  {fg:'#e0d030', bg:'rgba(220,200,20,0.04)',  accent:'#d4b800', border:'#a08000'},
+    'gold':    {fg:'#d4b030', bg:'rgba(200,160,20,0.04)',  accent:'#c49000', border:'#906000'},
+    'orange':  {fg:'#ff9040', bg:'rgba(220,120,20,0.04)',  accent:'#ff7020', border:'#cc4000'},
+    'pink':    {fg:'#ff80c0', bg:'rgba(220,60,140,0.04)',  accent:'#ff50b0', border:'#cc2080'},
+    'teal':    {fg:'#40e0d0', bg:'rgba(20,180,160,0.04)',  accent:'#30d0c0', border:'#10a090'},
+    'grey':    {fg:'#c0c0c0', bg:'rgba(120,120,120,0.04)', accent:'#a0a0a0', border:'#606060'},
+    'gray':    {fg:'#c0c0c0', bg:'rgba(120,120,120,0.04)', accent:'#a0a0a0', border:'#606060'},
+    'maroon':  {fg:'#e07070', bg:'rgba(160,20,40,0.05)',   accent:'#cc5050', border:'#901020'},
+    'navy':    {fg:'#70a0e0', bg:'rgba(10,20,120,0.06)',   accent:'#5080d0', border:'#102080'},
+  };
+  for (const [k, v] of Object.entries(map)) { if (n.includes(k)) return v; }
+  return null;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fmt(ms) {
+  const s = Math.floor(ms / 1000);
+  return `${Math.floor(s/60)}m${String(s%60).padStart(2,'0')}s`;
+}
+function diff(a, b) {
+  const d = a - b;
+  const cls = d > 0 ? 'diff-pos' : d < 0 ? 'diff-neg' : 'diff-zero';
+  return `<span class="${cls}">${d>0?'+':''}${d}</span>`;
+}
+function penColor(n) {
+  return n >= 4 ? 'var(--red)' : n >= 2 ? 'var(--orange)' : n >= 1 ? 'var(--accent)' : 'var(--muted)';
+}
+function inboxBadge(code) {
+  return `<span class="inbox-badge">IN BOX${code ? ': '+code : ''}</span>`;
+}
+function latestPenCode(t, num) {
+  const sid = skaters[t][num]?.id;
+  if (!sid) return '';
+  const pfx = `ScoreBoard.CurrentGame.Team(${t}).Skater(${sid}).Penalty(`;
+  const codes = Object.entries(state)
+    .filter(([k,v]) => k.startsWith(pfx) && k.endsWith(').Code') && !k.includes('Penalty(fo)') && v && v !== 'FO')
+    .map(([,v]) => v);
+  return codes.length ? codes[codes.length-1] : '';
+}
+function spSplitMs(p, jn, t) {
+  const spUuid = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).StarPassTrip`);
+  if (!spUuid) return 0;
+  for (let n = 1; n <= 10; n++) {
+    if (g(`Period(${p}).Jam(${jn}).TeamJam(${t}).ScoringTrip(${n}).Id`) === spUuid)
+      return g(`Period(${p}).Jam(${jn}).TeamJam(${t}).ScoringTrip(${n}).JamClockStart`) || 0;
+  }
+  return 0;
+}
+
+// ── Main render ───────────────────────────────────────────────────────────────
+function render() {
+  if (!gameId) return;
+
+  // Game name
+  const gname = g('Name') || '—';
+  document.getElementById('gname').textContent = gname.length > 70 ? gname.slice(0,67)+'...' : gname;
+  document.getElementById('gstate').textContent = g('State') || '';
+
+  // Build skater map
+  skaters = {'1':{}, '2':{}};
+  for (const t of ['1','2']) {
+    const nameKeys = Object.keys(state).filter(k => k.includes(`Team(${t}).Skater(`) && k.endsWith('.Name'));
+    for (const k of nameKeys) {
+      const sid = k.match(/Skater\(([^)]+)\)/)?.[1];
+      if (!sid) continue;
+      const num = g(`Team(${t}).Skater(${sid}).RosterNumber`);
+      if (num) skaters[t][num] = {name: state[k], id: sid};
+    }
+  }
+
+  // Team names & jersey colors
+  for (const t of ['1','2']) {
+    const fullName = g(`Team(${t}).Name`) || `Team ${t}`;
+    const short = fullName.includes(' - ') ? fullName.split(' - ').pop() : fullName;
+    document.getElementById(`t${t}n`).textContent = short;
+    document.getElementById(`jph-t${t}`).textContent = short.toUpperCase();
+    document.getElementById(`bph-t${t}`).textContent = short.toUpperCase();
+
+    const jerseyName = g(`Team(${t}).AlternateName(operator)`);
+    const c = jerseyColor(jerseyName);
+    if (c) {
+      document.documentElement.style.setProperty(`--t${t}`, c.accent);
+      for (const el of [document.getElementById(`jpanel-t${t}`), document.getElementById(`bpanel-t${t}`)]) {
+        el.style.background = c.bg;
+        el.style.borderTop = `2px solid ${c.border}`;
+      }
+      // Jersey chip
+      const chipId = `jersey-chip-t${t}`;
+      for (const hdrId of [`jph-t${t}`, `bph-t${t}`]) {
+        const hdr = document.getElementById(hdrId);
+        let chip = document.getElementById(chipId + '-' + hdrId);
+        if (!chip) { chip = document.createElement('span'); chip.id = chipId+'-'+hdrId; chip.className='jersey-chip'; hdr.after(chip); }
+        chip.textContent = jerseyName; chip.style.color = c.accent; chip.style.borderColor = c.border;
+      }
+    }
+  }
+
+  // Scores
+  for (const t of ['1','2']) {
+    document.getElementById(`t${t}s`).textContent = g(`Team(${t}).Score`) ?? 0;
+  }
+
+  // Period / jam number
+  const cp = g('Clock(Period).Number');
+  const cj = g('Clock(Jam).Number');
+  document.getElementById('pnum').textContent = cp || '—';
+  document.getElementById('jnum').textContent = cj || '—';
+
+  // Clock from state (interpolation runs separately via setInterval)
+  const stateMs = g('Clock(Jam).Time');
+  if (stateMs !== undefined && !clockRunning) renderClock(stateMs);
+
+  // Period clock
+  const pClockMs = periodClockMs !== null ? periodClockMs : g('Clock(Period).Time');
+  if (pClockMs !== undefined && pClockMs !== null) {
+    const ps = Math.floor(pClockMs / 1000);
+    const pm = Math.floor(ps / 60);
+    const pss = String(ps % 60).padStart(2,'0');
+    document.getElementById('pclock-lbl').textContent = `${pm}:${pss}`;
+  }
+
+  // Clock state label -- what clock is actually running
+  const jamRunning      = g('Clock(Jam).Running');
+  const lineupRunning   = g('Clock(Lineup).Running');
+  const timeoutRunning  = g('Clock(Timeout).Running');
+  const interRunning    = g('Clock(Intermission).Running');
+  let clockLabel = 'JAM';
+  let clockColor = 'var(--accent)';
+
+  if (interRunning) {
+    clockLabel = 'INTERMISSION';
+    clockColor = 'var(--muted)';
+    const ims = g('Clock(Intermission).Time');
+    if (ims !== undefined) {
+      const is = Math.floor(ims / 1000);
+      const im = Math.floor(is / 60);
+      document.getElementById('jclock').textContent = `${im}:${String(is%60).padStart(2,'0')}`;
+    }
+  } else if (timeoutRunning) {
+    clockLabel = 'TIMEOUT';
+    clockColor = 'var(--orange)';
+    const tms = g('Clock(Timeout).Time');
+    if (tms !== undefined) {
+      const ts = Math.floor(tms / 1000);
+      const tm = Math.floor(ts / 60);
+      document.getElementById('jclock').textContent = `${tm}:${String(ts%60).padStart(2,'0')}`;
+    }
+  } else if (lineupRunning && !jamRunning) {
+    clockLabel = 'LINEUP';
+    clockColor = 'var(--muted)';
+    const lms = g('Clock(Lineup).Time');
+    if (lms !== undefined) {
+      const ls = Math.floor(lms / 1000);
+      document.getElementById('jclock').textContent = `0:${String(ls).padStart(2,'0')}`;
+    }
+  }
+
+  document.getElementById('clock-state-lbl').textContent = clockLabel;
+  document.getElementById('clock-state-lbl').style.color = clockColor;
+  document.getElementById('jclock').style.color = clockColor;
+
+  // Build penalty counts
+  penCount = {'1':{}, '2':{}};
+  for (const t of ['1','2']) {
+    const pfx = penKeyPfx(t);
+    for (const [k,v] of Object.entries(state)) {
+      if (!k.startsWith(pfx) || !k.includes('.Skater(') || !k.includes(').Penalty(') || !k.endsWith('.Code')) continue;
+      if (k.includes('Penalty(fo)') || !v || v === 'FO') continue;
+      const sid = k.match(/Skater\(([^)]+)\)/)?.[1];
+      if (!sid) continue;
+      const num = g(`Team(${t}).Skater(${sid}).RosterNumber`);
+      if (num) penCount[t][num] = (penCount[t][num] || 0) + 1;
+    }
+  }
+
+  // Compute all stats
+  jammerStats  = {'1':{}, '2':{}};
+  pivotStats   = {'1':{}, '2':{}};
+  blockerStats = {'1':{}, '2':{}};
+  currentJammer   = {'1':null, '2':null};
+  currentBlockers = {'1':new Set(), '2':new Set()};
+  currentSPPivot  = {'1':null, '2':null};
+  const jamIsRunning = g('Clock(Jam).Running') && !g('Clock(Lineup).Running') && !g('Clock(Timeout).Running') && !g('Clock(Intermission).Running');
+  const currentInBox  = {'1':{jammer:false, pivot:false, blocker:{}}, '2':{jammer:false, pivot:false, blocker:{}}};
+
+  for (const t of ['1','2']) {
+    const opp = t === '1' ? '2' : '1';
+    for (const p of ['1','2']) {
+      for (let jn = 1; jn <= 50; jn++) {
+        const jamScore = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).JamScore`);
+        if (jamScore === undefined) break;
+        const oppScore = g(`Period(${p}).Jam(${jn}).TeamJam(${opp}).JamScore`) || 0;
+        const dur      = g(`Period(${p}).Jam(${jn}).Duration`) || 0;
+        const lead     = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).Lead`);
+        const sp       = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).StarPass`);
+        const jammer   = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).Fielding(Jammer).SkaterNumber`);
+        const pivot    = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).Fielding(Pivot).SkaterNumber`);
+        const b1       = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).Fielding(Blocker1).SkaterNumber`);
+        const b2       = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).Fielding(Blocker2).SkaterNumber`);
+        const b3       = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).Fielding(Blocker3).SkaterNumber`);
+        const afterSP  = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).AfterSPScore`) || 0;
+
+        // Track time split for SP
+        let jammerMs = dur, pivotMs = 0;
+        if (sp) { const split = spSplitMs(p, jn, t); jammerMs = split; pivotMs = dur - split; }
+
+        // Jammer stats
+        if (jammer) {
+          if (!jammerStats[t][jammer]) jammerStats[t][jammer] = {jams:0, lead:0, ptsFor:0, ptsAgainst:0, spGiven:0, spTo:{}, trackMs:0, inBox:false, boxCode:''};
+          const s = jammerStats[t][jammer];
+          s.jams++; if (lead) s.lead++;
+          s.ptsFor += (jamScore||0); s.ptsAgainst += oppScore;
+          s.trackMs += jammerMs;
+          if (sp && pivot) { s.spGiven++; s.spTo[pivot] = (s.spTo[pivot]||0)+1; }
+        }
+
+        // Star-pass pivot stats
+        if (sp && pivot) {
+          if (!pivotStats[t][pivot]) pivotStats[t][pivot] = {received:0, ptsAfterSP:0, ptsAgainst:0, from:{}, trackMs:0, inBox:false, boxCode:''};
+          const ps = pivotStats[t][pivot];
+          ps.received++; ps.ptsAfterSP += afterSP; ps.ptsAgainst += oppScore;
+          ps.trackMs += pivotMs;
+          if (jammer) ps.from[jammer] = (ps.from[jammer]||0)+1;
+        }
+
+        // Blocker stats (Blocker1/2/3 + Pivot as blocker when no SP)
+        const blockers = [b1, b2, b3];
+        if (pivot) blockers.push(pivot); // pivot always blocks unless they received star
+        for (const bnum of blockers) {
+          if (!bnum) continue;
+          if (!blockerStats[t][bnum]) blockerStats[t][bnum] = {jams:0, pivotJams:0, trackMs:0, inBox:false, boxCode:''};
+          const bs = blockerStats[t][bnum];
+          bs.jams++;
+          if (bnum === pivot) bs.pivotJams++;
+          bs.trackMs += dur;
+        }
+
+        // Current jam state for active highlighting + box status
+        const isCurP = String(p) === String(cp);
+        const isCurJ = jn === parseInt(cj);
+        if (isCurP && isCurJ && jamIsRunning) {
+          currentJammer[t]  = sp ? null : jammer;
+          currentSPPivot[t] = sp ? pivot : null;
+          currentBlockers[t] = new Set([b1, b2, b3, pivot].filter(Boolean));
+          // Box status -- only for star holder
+          const spHappened = sp;
+          if (!spHappened && jammer) {
+            const inBox = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).Fielding(Jammer).PenaltyBox`);
+            if (inBox && jammerStats[t][jammer]) {
+              jammerStats[t][jammer].inBox = true;
+              jammerStats[t][jammer].boxCode = latestPenCode(t, jammer);
+            }
+          }
+          if (spHappened && pivot) {
+            const inBox = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).Fielding(Pivot).PenaltyBox`);
+            if (inBox && pivotStats[t][pivot]) {
+              pivotStats[t][pivot].inBox = true;
+              pivotStats[t][pivot].boxCode = latestPenCode(t, pivot);
+            }
+          }
+          // Blocker box status
+          for (const [pos, bnum] of [['Blocker1',b1],['Blocker2',b2],['Blocker3',b3],['Pivot',pivot]]) {
+            if (!bnum) continue;
+            const inBox = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).Fielding(${pos}).PenaltyBox`);
+            if (inBox && blockerStats[t][bnum]) {
+              blockerStats[t][bnum].inBox = true;
+              blockerStats[t][bnum].boxCode = latestPenCode(t, bnum);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Score bar -- active jammer, lead, jam score, power jam
+  const jamRunningNow   = g('Clock(Jam).Running');
+  const lineupRunningNow = g('Clock(Lineup).Running');
+
+  for (const t of ['1','2']) {
+    const opp = t === '1' ? '2' : '1';
+    const displayLead = g(`Period(${cp}).Jam(${cj}).TeamJam(${t}).DisplayLead`);
+    const js   = g(`Period(${cp}).Jam(${cj}).TeamJam(${t}).JamScore`) || 0;
+    const sp   = g(`Period(${cp}).Jam(${cj}).TeamJam(${t}).StarPass`);
+
+    // Power jam: opponent star holder is in the box
+    // If opponent passed the star, their pivot holds it; otherwise their jammer does
+    const oppSP = g(`Period(${cp}).Jam(${cj}).TeamJam(${opp}).StarPass`);
+    const oppStarHolderInBox = oppSP
+      ? g(`Period(${cp}).Jam(${cj}).TeamJam(${opp}).Fielding(Pivot).PenaltyBox`)
+      : g(`Period(${cp}).Jam(${cj}).TeamJam(${opp}).Fielding(Jammer).PenaltyBox`);
+    const isPowerJam = !!oppStarHolderInBox;
+
+    if (!jamRunningNow) {
+      // Between jams -- clear lead/pj, show next jam lineup jammer
+      document.getElementById(`t${t}lead`).className = 'lead-badge';
+      document.getElementById(`t${t}pj`).className = 'pj-banner';
+      document.getElementById(`t${t}js`).textContent = '';
+      const nextJam = (parseInt(cj) || 0) + 1;
+      const nextJammer = g(`Period(${cp}).Jam(${nextJam}).TeamJam(${t}).Fielding(Jammer).SkaterNumber`);
+      const nextName   = nextJammer ? (skaters[t][nextJammer]?.name || '') : '';
+      document.getElementById(`t${t}aj`).textContent = nextJammer ? `#${nextJammer} ${nextName}` : '';
+    } else {
+      // Jam in progress
+      const activeNum = sp
+        ? g(`Period(${cp}).Jam(${cj}).TeamJam(${t}).Fielding(Pivot).SkaterNumber`)
+        : g(`Period(${cp}).Jam(${cj}).TeamJam(${t}).Fielding(Jammer).SkaterNumber`);
+      const activeName = activeNum ? (skaters[t][activeNum]?.name || '') : '';
+      document.getElementById(`t${t}lead`).className = 'lead-badge' + (displayLead ? ' on' : '');
+      document.getElementById(`t${t}js`).textContent = `JAM +${js}`;
+      // Initial trip indicator
+      const tripNum = g(`Period(${cp}).Jam(${cj}).TeamJam(${t}).CurrentTripNumber`);
+      const initialTrip = tripNum === 1 || tripNum === '1';
+      const tripTag = initialTrip ? ' <span style="font-size:10px;color:var(--orange);letter-spacing:1px;font-family:DM Mono,monospace">INITIAL</span>' : '';
+      const starHolderInBox = sp
+        ? g(`Period(${cp}).Jam(${cj}).TeamJam(${t}).Fielding(Pivot).PenaltyBox`)
+        : g(`Period(${cp}).Jam(${cj}).TeamJam(${t}).Fielding(Jammer).PenaltyBox`);
+      const boxCode = starHolderInBox ? latestPenCode(t, activeNum) : '';
+      const boxTag = starHolderInBox ? ` <span class="inbox-badge">IN BOX${boxCode ? ': '+boxCode : ''}</span>` : '';
+      document.getElementById(`t${t}aj`).innerHTML = activeName ? `#${activeNum} ${activeName}${tripTag}${boxTag}` : '';
+      document.getElementById(`t${t}pj`).className = 'pj-banner' + (isPowerJam ? ' on' : '');
+    }
+  }
+
+  // Render tables
+  renderJammers('1'); renderJammers('2');
+  renderBlockers('1'); renderBlockers('2');
+
+  document.getElementById('footer-info').textContent =
+    `${Object.keys(state).length} keys | updated ${new Date().toLocaleTimeString()}`;
+}
+
+// ── Jammer rows ───────────────────────────────────────────────────────────────
+function renderJammers(t) {
+  // Debug: count how many jam keys we have
+  const jamKeys = Object.keys(state).filter(k => k.includes('Period(1).Jam(') && k.includes(`TeamJam(${t}).JamScore`));
+  const skKeys  = Object.keys(state).filter(k => k.includes(`Team(${t}).Skater(`) && k.endsWith('.Name'));
+  if (t === '1') {
+    document.getElementById('footer-info').textContent =
+      `jamKeys:${jamKeys.length} skKeys:${skKeys.length} jammerStats:${Object.keys(jammerStats[t]).length} | gameId:${gameId?.slice?.(0,8)||gameId}`;
+  }
+  const sorted = Object.entries(jammerStats[t]).filter(([num]) => num !== "?").sort((a,b) => a[0].localeCompare(b[0]));
+  let rows = '';
+  for (const [num, s] of sorted) {
+    try {
+      const name = skaters[t][num]?.name || '';
+      const lp = s.jams > 0 ? Math.round(100*s.lead/s.jams) : 0;
+      const lc = lp>=60?'pct-hi':lp>=40?'pct-md':'pct-lo';
+      const pens = penCount[t][num] || 0;
+      const spPip = s.spGiven > 0 ? `<span class="sp-cell">${s.spGiven}✦</span>` : `<span style="color:var(--dim)">&#8212;</span>`;
+      const badge = s.inBox ? inboxBadge(s.boxCode) : '';
+      const isActive = num === currentJammer[t];
+      const d = s.ptsFor - s.ptsAgainst;
+      const dc = d>0?'diff-pos':d<0?'diff-neg':'diff-zero';
+      rows += `<div class="data-row jammer-grid${isActive?' active-row':''}">
+        <span class="sknum">${num}</span>
+        <span class="skname" title="${name}">${name}${badge}</span>
+        <span class="stat ${lc}">${lp}%<br><span style="font-size:10px;color:var(--muted)">${s.lead}/${s.jams}</span></span>
+        <span class="stat" style="color:${s.ptsFor>0?'var(--green)':'var(--muted)'}">${s.ptsFor}</span>
+        <span class="stat" style="color:${s.ptsAgainst>0?'var(--red)':'var(--muted)'}">${s.ptsAgainst}<br><span class="${dc}">${d>0?'+':''}${d}</span></span>
+        <span class="track-t">${fmt(s.trackMs)}</span>
+        <span class="stat" style="color:${penColor(pens)}">${pens}</span>
+        <span class="stat">${spPip}</span>
+      </div>`;
+    } catch(e) {
+      rows += `<div class="no-data">row error: ${e.message}</div>`;
+    }
+  }
+  document.getElementById(`jrows-t${t}`).innerHTML = rows || '<div class="no-data">no jammer data yet</div>';
+
+  // Star pass pivot rows
+  const spSorted = Object.entries(pivotStats[t]).filter(([num]) => num !== "?").sort((a,b) => a[0].localeCompare(b[0]));
+  let spRows = '';
+  for (const [num, s] of spSorted) {
+    try {
+      const name = skaters[t][num]?.name || '';
+      const pens = penCount[t][num] || 0;
+      const fromStr = Object.entries(s.from).map(([jn,c]) => `#${jn}${c>1?'x'+c:''}`).join(', ');
+      const badge = s.inBox ? inboxBadge(s.boxCode) : '';
+      const d2 = s.ptsAfterSP - s.ptsAgainst;
+      const dc2 = d2>0?'diff-pos':d2<0?'diff-neg':'diff-zero';
+      const isActiveSP = num === currentSPPivot[t];
+      spRows += `<div class="data-row sp-pivot-grid${isActiveSP?' active-row':''}">
+        <span class="sknum">${num}</span>
+        <span class="skname" title="${name}">${name}${badge}</span>
+        <span class="stat" style="color:${s.ptsAfterSP>0?'var(--green)':'var(--muted)'}">${s.ptsAfterSP}</span>
+        <span class="stat" style="color:${s.ptsAgainst>0?'var(--red)':'var(--muted)'}">${s.ptsAgainst}<br><span class="${dc2}">${d2>0?'+':''}${d2}</span></span>
+        <span class="track-t">${fmt(s.trackMs)}</span>
+        <span class="stat" style="color:${penColor(pens)}">${pens}</span>
+        <span class="sp-recv-cell">${fromStr}</span>
+      </div>`;
+    } catch(e) {
+      spRows += `<div class="no-data">sp row error: ${e.message}</div>`;
+    }
+  }
+  document.getElementById(`sprows-t${t}`).innerHTML = spRows || '<div class="no-data">no star passes yet</div>';
+}
+
+// ── Blocker rows ──────────────────────────────────────────────────────────────
+function renderBlockers(t) {
+  // Sort by jams played desc
+  const sorted = Object.entries(blockerStats[t]).filter(([num]) => num !== "?").sort((a,b) => a[0].localeCompare(b[0]));
+  let brows = '';
+  for (const [num, s] of sorted) {
+    try {
+      const name = skaters[t][num]?.name || '';
+      const pens = penCount[t][num] || 0;
+      const badge = s.inBox ? inboxBadge(s.boxCode) : '';
+      const isActive = currentBlockers[t].has(num);
+      brows += `<div class="data-row blocker-grid${isActive?' active-row':''}">
+        <span class="sknum">${num}</span>
+        <span class="skname" title="${name}">${name}${badge}</span>
+        <span class="stat">${s.jams}</span>
+        <span class="stat" style="color:var(--orange)">${s.pivotJams > 0 ? s.pivotJams : '&#8212;'}</span>
+        <span class="track-t">${fmt(s.trackMs)}</span>
+        <span class="stat" style="color:${penColor(pens)}">${pens}</span>
+      </div>`;
+    } catch(e) {
+      brows += `<div class="no-data">row error: ${e.message}</div>`;
+    }
+  }
+  document.getElementById(`brows-t${t}`).innerHTML = brows || '<div class="no-data">no blocker data yet</div>';
+}
+
+// Auto-connect from URL hash
+window.addEventListener('load', () => {
+  const hash = location.hash.slice(1);
+  if (hash && hash.includes(':')) { document.getElementById('ip-in').value = hash; connect(); }
+});
+</script>
+</body>
+</html>
