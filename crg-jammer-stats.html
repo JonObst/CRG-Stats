@@ -219,7 +219,7 @@ footer { padding: 6px 16px; border-top: 1px solid var(--border); font-size: 10px
   <div class="logo">BOUT STATS</div>
   <div class="conn-bar">
     <div class="dot" id="dot"></div>
-    <input type="text" id="ip-in" value="yourserver:8000" placeholder="CRG IP:port"/>
+    <input type="text" id="ip-in" value="192.168.32.220:8000" placeholder="CRG IP:port"/>
     <button class="btn" id="conn-btn" onclick="connect()">Connect</button>
     <button class="btn danger" id="disc-btn" style="display:none" onclick="disconnect()">Disconnect</button>
     <span class="status-txt" id="status-txt">Not connected</span>
@@ -813,7 +813,7 @@ function render() {
         : g(`Period(${cp}).Jam(${cj}).TeamJam(${t}).Fielding(Jammer).PenaltyBox`);
       const boxCode = starHolderInBox ? latestPenCode(t, activeNum) : '';
       const boxTag = starHolderInBox ? ` <span class="inbox-badge">IN BOX${boxCode ? ': '+boxCode : ''}</span>` : '';
-      document.getElementById(`t${t}aj`).innerHTML = activeName ? `#${activeNum} ${activeName}${tripTag}${boxTag}` : '';
+      document.getElementById(`t${t}aj`).innerHTML = activeName ? `<span style="display:inline-block;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle">#${activeNum} ${activeName}</span>${tripTag}${boxTag}` : '';
       document.getElementById(`t${t}pj`).className = 'pj-banner' + (isPowerJam ? ' on' : '');
     }
   }
