@@ -40,7 +40,8 @@ Or bookmark with auto-connect: `http://<CRG-IP>:8000/crg-jammer-stats.html#<CRG-
 - The CRG machine's Jetty server handles this automatically when the file is placed in the `html` folder
 - Track time reflects jam clock time only (not lineup time)
 - Star pass splits track time between jammer and pivot at the moment of the pass
-
+- Pivot points-against is not tracked. CRG records star pass jams as separate entries and does not split opponent scoring across the SP boundary, so this stat cannot be accurately attributed. Pivot FOR (points scored after receiving the star) is accurate.
+  
 ## License
 
 GPL-3.0 — see [LICENSE](LICENSE) for details.
