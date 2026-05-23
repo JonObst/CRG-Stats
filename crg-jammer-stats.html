@@ -164,7 +164,7 @@ header {
 /* Blocker cols: # name jams pivot track pen */
 .blocker-grid { grid-template-columns: 72px 1fr 48px 48px 52px 36px; }
 /* Pivot-as-jammer cols: # name for agnst track pen passed-from */
-.sp-pivot-grid { grid-template-columns: 72px 1fr 52px 64px 52px 36px 1fr; }
+.sp-pivot-grid { grid-template-columns: 72px 1fr 52px 52px 36px 1fr; }
 
 .data-row {
   display: grid; gap: 4px; padding: 6px 16px;
@@ -219,7 +219,7 @@ footer { padding: 6px 16px; border-top: 1px solid var(--border); font-size: 10px
   <div class="logo">BOUT STATS</div>
   <div class="conn-bar">
     <div class="dot" id="dot"></div>
-    <input type="text" id="ip-in" value="yourserver:8000" placeholder="CRG IP:port"/>
+    <input type="text" id="ip-in" value="192.168.32.220:8000" placeholder="CRG IP:port"/>
     <button class="btn" id="conn-btn" onclick="connect()">Connect</button>
     <button class="btn danger" id="disc-btn" style="display:none" onclick="disconnect()">Disconnect</button>
     <span class="status-txt" id="status-txt">Not connected</span>
@@ -292,7 +292,6 @@ footer { padding: 6px 16px; border-top: 1px solid var(--border); font-size: 10px
     <div class="sec-head sp-pivot-grid" style="margin-top:4px">
       <span>#</span><span>PIVOT (Star Receiver)</span>
       <span style="text-align:right">FOR</span>
-      <span style="text-align:right">AGNST</span>
       <span style="text-align:right">TRACK</span>
       <span style="text-align:right">PEN</span>
       <span style="text-align:right">PASSED FROM</span>
@@ -314,7 +313,6 @@ footer { padding: 6px 16px; border-top: 1px solid var(--border); font-size: 10px
     <div class="sec-head sp-pivot-grid" style="margin-top:4px">
       <span>#</span><span>PIVOT (Star Receiver)</span>
       <span style="text-align:right">FOR</span>
-      <span style="text-align:right">AGNST</span>
       <span style="text-align:right">TRACK</span>
       <span style="text-align:right">PEN</span>
       <span style="text-align:right">PASSED FROM</span>
@@ -695,7 +693,11 @@ function render() {
         const b1       = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).Fielding(Blocker1).SkaterNumber`);
         const b2       = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).Fielding(Blocker2).SkaterNumber`);
         const b3       = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).Fielding(Blocker3).SkaterNumber`);
-        const afterSP  = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).AfterSPScore`) || 0;
+        const afterSP    = g(`Period(${p}).Jam(${jn}).TeamJam(${t}).AfterSPScore`) || 0;
+        // Opponent score all attributed to jammer -- CRG does not cleanly split
+        // opponent scoring across the SP boundary so we don't attempt to split it
+        const oppBeforeSP = oppScore;
+        const oppAfterSP  = 0;
 
         // Track time split for SP
         let jammerMs = dur, pivotMs = 0;
@@ -706,16 +708,16 @@ function render() {
           if (!jammerStats[t][jammer]) jammerStats[t][jammer] = {jams:0, lead:0, ptsFor:0, ptsAgainst:0, spGiven:0, spTo:{}, trackMs:0, inBox:false, boxCode:''};
           const s = jammerStats[t][jammer];
           s.jams++; if (lead) s.lead++;
-          s.ptsFor += (jamScore||0); s.ptsAgainst += oppScore;
+          s.ptsFor += (jamScore||0); s.ptsAgainst += sp ? oppBeforeSP : oppScore;
           s.trackMs += jammerMs;
           if (sp && pivot) { s.spGiven++; s.spTo[pivot] = (s.spTo[pivot]||0)+1; }
         }
 
         // Star-pass pivot stats
         if (sp && pivot) {
-          if (!pivotStats[t][pivot]) pivotStats[t][pivot] = {received:0, ptsAfterSP:0, ptsAgainst:0, from:{}, trackMs:0, inBox:false, boxCode:''};
+          if (!pivotStats[t][pivot]) pivotStats[t][pivot] = {received:0, ptsAfterSP:0, from:{}, trackMs:0, inBox:false, boxCode:''};
           const ps = pivotStats[t][pivot];
-          ps.received++; ps.ptsAfterSP += afterSP; ps.ptsAgainst += oppScore;
+          ps.received++; ps.ptsAfterSP += afterSP;
           ps.trackMs += pivotMs;
           if (jammer) ps.from[jammer] = (ps.from[jammer]||0)+1;
         }
@@ -880,7 +882,6 @@ function renderJammers(t) {
         <span class="sknum">${num}</span>
         <span class="skname" title="${name}">${name}${badge}</span>
         <span class="stat" style="color:${s.ptsAfterSP>0?'var(--green)':'var(--muted)'}">${s.ptsAfterSP}</span>
-        <span class="stat" style="color:${s.ptsAgainst>0?'var(--red)':'var(--muted)'}">${s.ptsAgainst}<br><span class="${dc2}">${d2>0?'+':''}${d2}</span></span>
         <span class="track-t">${fmt(s.trackMs)}</span>
         <span class="stat" style="color:${penColor(pens)}">${pens}</span>
         <span class="sp-recv-cell">${fromStr}</span>
