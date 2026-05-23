@@ -2,9 +2,9 @@
 
 A real-time roller derby bout statistics dashboard that connects directly to a [CRG Scoreboard](https://github.com/rollerderby/scoreboard) instance via WebSocket and displays live jammer, pivot, and blocker stats as the game unfolds.
 
-![Jammers tab](jammer.png)
+![Jammers tab](Jammer.png)
 
-![Blockers tab](blocker.png)
+![Blockers tab](Blocker.png)
 
 ## Features
 
