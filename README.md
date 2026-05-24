@@ -4,6 +4,7 @@ A real-time roller derby bout statistics dashboard that connects directly to a [
 
 ![Jammers tab](Jammer.png)
 ![Blockers tab](Blocker.png)
+![Charts tab](Chart.png)
 
 ## Features
 
