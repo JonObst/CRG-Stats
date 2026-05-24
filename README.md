@@ -33,6 +33,7 @@ Or bookmark with auto-connect: `http://<CRG-IP>:8000/crg-jammer-stats.html#<CRG-
 
 ## Requirements
 
+- A moderately powerful computer (all processing is done client-side instead of on the CRG server)
 - CRG Scoreboard v2025.x (tested on v2025.9)
 - Any modern browser on the same network as the CRG machine
 - No build step, no dependencies, no server
