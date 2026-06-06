@@ -276,7 +276,7 @@ footer { padding: 6px 16px; border-top: 1px solid var(--border); font-size: 10px
   <div class="logo">BOUT STATS</div>
   <div class="conn-bar">
     <div class="dot" id="dot"></div>
-    <input type="text" id="ip-in" value="YOURSERVER:8000" placeholder="CRG IP:port"/>
+    <input type="text" id="ip-in" value="192.168.32.220:8000" placeholder="CRG IP:port"/>
     <button class="btn" id="conn-btn" onclick="connect()">Connect</button>
     <button class="btn danger" id="disc-btn" style="display:none" onclick="disconnect()">Disconnect</button>
     <span class="status-txt" id="status-txt">Not connected</span>
@@ -443,6 +443,8 @@ footer { padding: 6px 16px; border-top: 1px solid var(--border); font-size: 10px
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let ws = null, gameId = null, state = {};
+let chartColor1 = '#40a0ff';
+let chartColor2 = '#ff4060';
 let jammerStats  = {'1':{}, '2':{}};
 let pivotStats   = {'1':{}, '2':{}};
 let blockerStats = {'1':{}, '2':{}};
@@ -740,9 +742,9 @@ function renderCharts() {
   const t2name = (g('Team(2).Name') || 'Team 2').split(' - ').pop().trim();
 
   // Build per-jam data
-  const labels = [];
-  const t1cumulative = [], t2cumulative = [];
-  const differential = [];
+  const labels = ['START'];
+  const t1cumulative = [0], t2cumulative = [0];
+  const differential = [0];
   const t1lead = [], t2lead = [], nolead = [];
   const t1pens = [], t2pens = [];
   let t1total = 0, t2total = 0;
@@ -772,8 +774,8 @@ function renderCharts() {
   const t1penCum = labels.map(lbl => penTimeline['1'][lbl] || 0);
   const t2penCum = labels.map(lbl => penTimeline['2'][lbl] || 0);
 
-  const t1color = getComputedStyle(document.documentElement).getPropertyValue('--t1').trim() || '#40a0ff';
-  const t2color = getComputedStyle(document.documentElement).getPropertyValue('--t2').trim() || '#ff4060';
+  const t1color = chartColor1;
+  const t2color = chartColor2;
   const gridColor = 'rgba(255,255,255,0.06)';
   const textColor = '#7070a0';
 
@@ -870,6 +872,16 @@ function render() {
     const c = jerseyColor(jerseyName);
     if (c) {
       document.documentElement.style.setProperty(`--t${t}`, c.accent);
+      // Chart colors need contrast on dark bg -- remap light jersey colors
+      const chartPalette = {
+        'white': '#c0c0ff', 'silver': '#90b0d0', 'grey': '#90a0b0', 'gray': '#90a0b0',
+        'yellow': '#d4b800', 'gold': '#c49000', 'black': '#909090'
+      };
+      const jn2 = jerseyName.toLowerCase();
+      let chartCol = c.accent;
+      for (const [key, val] of Object.entries(chartPalette)) { if (jn2.includes(key)) { chartCol = val; break; } }
+      if (t === '1') chartColor1 = chartCol;
+      if (t === '2') chartColor2 = chartCol;
       for (const el of [document.getElementById(`jpanel-t${t}`), document.getElementById(`bpanel-t${t}`)]) {
         el.style.background = c.bg;
         el.style.borderTop = `2px solid ${c.border}`;
